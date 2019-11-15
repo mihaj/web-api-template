@@ -1,0 +1,77 @@
+﻿# Build pipeline
+
+trigger:
+  branches:
+    include:
+    - develop
+    - master
+
+resources:
+- repo: self
+
+variables:
+  vmImageName: 'ubuntu-latest'
+  BuildConfiguration: 'Release'
+  BuildPlatform: 'any cpu'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:  
+  - job: GetTagVersion
+    displayName: Calculate image tag version
+    steps:
+    - task: Bash@3
+      name: GetTagVersion
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Write your commands here
+          REVISION_HASH=$(git rev-parse --quiet --short HEAD)
+          COMMIT_TIMESTAMP=$(git show -s --format=%ct ${REVISION_HASH})
+          COMMIT_DATE_TIME=$(TZ=UTC date -d "@${COMMIT_TIMESTAMP}" +%Y-%m-%d_%H-%M-%S)
+          IMAGE_VERSION="${COMMIT_DATE_TIME}_${BUILD_SOURCEBRANCHNAME:-branch}_${REVISION_HASH}"
+          echo $(echo "$IMAGE_VERSION" | sed -e "s/[^a-zA-Z0-9_.-]/-/g")
+          echo "##vso[task.setvariable variable=IMAGE_VERSION;isOutput=true]$IMAGE_VERSION"
+  - job: Build
+    displayName: Build
+    dependsOn:
+    - GetTagVersion
+    variables:
+      imageTag: $[ dependencies.GetTagVersion.outputs['GetTagVersion.IMAGE_VERSION'] ]
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: GitVersion@5
+      inputs:
+        runtime: 'core'
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        feedsToUse: 'select'
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        projects: '**/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+    - task: DotNetCoreCLI@2
+      displayName: Test
+      inputs:
+        command: test
+        projects: '**/*[Tt]ests/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+        publishTestResults: true
+    - task: DotNetCoreCLI@2
+      displayName: Publish
+      inputs:
+        command: publish
+        publishWebProjects: True
+        arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+        zipAfterPublish: True
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact'
+      inputs:
+        PathtoPublish: '$(build.artifactstagingdirectory)'
+      condition: succeededOrFailed()

@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapi
+  labels:
+    app.kubernetes.io/name: svc
+    app.kubernetes.io/instance: webapi
+    app.kubernetes.io/part-of: webapi
+spec:
+  selector:
+    app.kubernetes.io/name: webapi
+    app.kubernetes.io/instance: webapi
+    app.kubernetes.io/part-of: webapi
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  type: ClusterIP

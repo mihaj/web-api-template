@@ -1,0 +1,42 @@
+trigger:
+  branches:
+    include:
+    - features/*
+
+resources:
+- repo: self
+
+variables: 
+  vmImageName: 'ubuntu-latest'
+  BuildConfiguration: 'Release'
+  BuildPlatform: 'any cpu'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+        feedsToUse: 'select'
+        vstsFeed: '9fe4e81f-9300-4cf3-b869-82b51a181fbb'
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        projects: '**/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+    - task: DotNetCoreCLI@2
+      displayName: Test
+      enabled: true
+      inputs:
+        command: test
+        projects: '**/*[Uu]nit[Tt]ests/*.csproj'
+        arguments: '--configuration $(BuildConfiguration)'
+        publishTestResults: true

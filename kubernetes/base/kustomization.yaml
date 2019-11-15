@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ingress.yaml
+- service.yaml
+- deployment.yaml
+images:
+- name: webapi.azurecr.io/webapi
+  newTag: "latest"
+vars:
+- fieldref:
+    fieldPath: metadata.labels.hostname
+  name: HOST
+  objref:
+    apiVersion: extensions/v1beta1
+    kind: Ingress
+    name: webapi
+- fieldref:
+    fieldPath: metadata.name
+  name: SERVICE
+  objref:
+    apiVersion: v1
+    kind: Service
+    name: webapi
