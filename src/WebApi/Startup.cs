@@ -27,8 +27,6 @@ namespace Mjc.Templates.WebApi
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.ConfigureAzureB2C(Configuration);
-
             services.ConfigureCors();
 
             services.ConfigureApplicationInsight(Configuration);
